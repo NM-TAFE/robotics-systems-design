@@ -1,8 +1,9 @@
 from microbit import *
 from maqueen import Maqueen
+# used for delays
 import utime
 import music
-# When ready to attach the huskylen uncomment this line
+# When ready to attach the huskylens uncomment this line
 # from huskyadapter import HuskyAdapter
 
 # Initialise Maqueen
@@ -13,6 +14,3 @@ print("Starting Maqueen test...")
 music.play(music.POWER_UP)
 
 print("All tests completed!")
-
-
-

@@ -1,3 +1,10 @@
+"""
+Updated By: John Robertson (GitHub: Robbo-lab)
+Initial code taken and adapted from: Python class for DFRobot Micro:maqueen platform
+https://www.dfrobot.com/product-1783.html
+Author: Krzysztof Sawicki <krzysztof@rssi.pl>
+License: GNU
+"""
 import microbit
 import machine
 import utime
@@ -5,7 +12,7 @@ import neopixel
 
 class Maqueen:
     """
-        Initial code taken and adpated from: Python class for DFRobot Micro:maqueen platform
+        Initial code taken and adapted from: Python class for DFRobot Micro:maqueen platform
         https://www.dfrobot.com/product-1783.html
         Author: Krzysztof Sawicki <krzysztof@rssi.pl>
         License: GNU
@@ -13,9 +20,6 @@ class Maqueen:
         This class provides an interface to control the Maqueen robot using MicroPython.
         It includes methods for controlling motors, LEDs, NeoPixel RGB lights, line sensors,
         ultrasonic distance measurement, and servos.
-        
-        Author: John Robertson
-        Version: v3
 
         Attributes:
             neo (NeoPixel): A NeoPixel instance for controlling RGB lights.
@@ -31,6 +35,7 @@ class Maqueen:
         microbit.pin1.write_digital(0)
         print("Robot initialised")
 
+
     # value: {0,1}
     def led_left(self, value):
         """
@@ -43,6 +48,7 @@ class Maqueen:
         """
         microbit.pin8.write_digital(value)
 
+
     # value: {0,1}
     def led_right(self, value):
         """
@@ -54,6 +60,7 @@ class Maqueen:
             >>> robot.led_right(0)  # Turns OFF right LED
         """
         microbit.pin12.write_digital(value)
+
 
     def rgb_front_left(self, red, green, blue):
         """
@@ -69,12 +76,14 @@ class Maqueen:
         self.neo[0] = (red, green, blue)
         self.neo.show()
 
+
     def rgb_rear_left(self, red, green, blue):
         """
         Sets the color of the rear left RGB LED.
         """
         self.neo[1] = (red, green, blue)
         self.neo.show()
+
 
     def rgb_rear_right(self, red, green, blue):
         """
@@ -83,12 +92,14 @@ class Maqueen:
         self.neo[2] = (red, green, blue)
         self.neo.show()
 
+
     def rgb_front_right(self, red, green, blue):
         """
         Sets the color of the front right RGB LED.
         """
         self.neo[3] = (red, green, blue)
         self.neo.show()
+
 
     def read_distance(self):
         """
@@ -101,6 +112,7 @@ class Maqueen:
         """
         divider = 42
         maxtime = 250 * divider
+
         microbit.pin2.read_digital()  # just for setting PULL_DOWN on pin2
         microbit.pin1.write_digital(0)
         utime.sleep_us(2)
@@ -113,6 +125,7 @@ class Maqueen:
 
         return distance
 
+
     def ultrasound_measure(self):
         """
         Measures distance using the ultrasonic sensor.
@@ -122,7 +135,7 @@ class Maqueen:
         utime.sleep_us(10)
         microbit.pin1.write_digital(0)
 
-        # wait for echo pin to become high
+        # Wait for echo pin to become high
         timeout = utime.ticks_us()
         while True:
             pulseBegin = utime.ticks_us()
@@ -131,7 +144,7 @@ class Maqueen:
             if (pulseBegin - timeout) > 5000:
                 return -1
 
-        # measure time until echo pin become low
+        # Measure time until echo pin becomes low
         while True:
             pulseEnd = utime.ticks_us()
             if 0 == microbit.pin2.read_digital():
@@ -146,6 +159,7 @@ class Maqueen:
             distance = pulse_time / 58
             return int(distance)
 
+
     def set_motor(self, motor, value):
         """
         Controls the motor.
@@ -156,6 +170,10 @@ class Maqueen:
             >>> utime.sleep(2)
             >>> robot.set_motor(1, -100)  # Right motor reverse at speed 100
         """
+        # Exit early if not a motor
+        if motor not in (0, 1):
+            raise ValueError("motor must be 0 (left) or 1 (right)")
+        
         # Ensure value does not exceed -255 to 255
         value = max(-255, min(value, 255))
 
@@ -177,6 +195,7 @@ class Maqueen:
         # Send command to I2C motor driver
         microbit.i2c.write(0x10, data)
 
+
     def motor_stop_all(self):
         """
         Stops both motors.
@@ -185,6 +204,7 @@ class Maqueen:
         """
         self.set_motor(0, 0)
         self.set_motor(1, 0)
+
 
     def read_patrol(self, sensor):
         """
@@ -201,6 +221,9 @@ class Maqueen:
             return microbit.pin13.read_digital()
         elif sensor == 1:  # right
             return microbit.pin14.read_digital()
+        
+        raise ValueError("sensor must be 0 (left) or 1 (right)")
+
 
     # return: {0,1}
     def line_left(self):
@@ -210,6 +233,7 @@ class Maqueen:
         """
         return microbit.pin13.read_digital()
 
+
     # return: {0,1}
     def line_right(self):
         """
@@ -217,3 +241,56 @@ class Maqueen:
         Returns: int: 1 if detecting a line, 0 otherwise.
         """
         return microbit.pin14.read_digital()
+
+
+    def follow_line(self, speed=80):
+        """
+        Performs one step of line-following logic using the left and right sensors.
+
+        The robot will:
+        - Stop if both sensors detect a line
+        - Turn left if only the left sensor detects a line
+        - Turn right if only the right sensor detects a line
+        - Move forward if no line is detected
+
+        Example:
+            >>> robot.follow_line()
+            >>> utime.sleep(0.1)
+        """
+        left = self.line_left()
+        right = self.line_right()
+
+        if left and right:
+            self.motor_stop_all()
+        elif left:
+            # Turn left → stop left motor, run right motor
+            self.set_motor(0, 0)
+            self.set_motor(1, speed)
+        elif right:
+            # Turn right → run left motor, stop right motor
+            self.set_motor(0, speed)
+            self.set_motor(1, 0)
+        else:
+            # Move forward
+            self.set_motor(0, speed)
+            self.set_motor(1, speed)
+
+
+    def stop_if_close(self, threshold=10):
+        """
+        Stops the robot if an object is detected within a specified distance.
+
+        This function reads the ultrasonic sensor and compares the measured
+        distance to the threshold value.
+
+        Example:
+            >>> if robot.stop_if_close(15):
+            >>>     print("Object detected - stopping")
+        """
+        distance = self.read_distance()
+
+        if distance > 0 and distance < threshold:
+            self.motor_stop_all()
+            return True
+
+        return False
