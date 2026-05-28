@@ -175,7 +175,6 @@ class Maqueen:
         data[2] = min(value, 255)
 
         # Send command to I2C motor driver
-        # TODO try/except
         microbit.i2c.write(0x10, data)
 
     def motor_stop_all(self):
