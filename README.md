@@ -53,5 +53,3 @@ The repository includes directories for:
 - `Session 1` to `Session 17`
 - `code-example` inside each session
 - `activities` inside each session
-
-`.gitkeep` files are included so GitHub will retain the empty directory structure.
